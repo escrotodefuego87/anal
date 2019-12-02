@@ -43,9 +43,7 @@ function App() {
   
 
   const compilar = () => {
-    setLexemas([]);
-    setEllex([]);
-    setIndlex([]);
+    setLexemas([]); setEllex([]); setIndlex([]);
     setLexemas(lexer(raw.trim()).lexemas);
     setEllex(lexer(raw.trim()).errores);
     setIndlex(lexer(raw.trim()).index);
@@ -53,38 +51,28 @@ function App() {
 
   }
   function parser(token){
-    console.log(token)
-    let state=0;
-    let arr = [];
-    let buffer = "";
+    console.log(token);
+
+    let parseo = [];
+    let buffer = {};
+    let errores = [];
+    let salto = 0;
     for (let i = 0; i < token.length; i++) {
-      if (token[i]==="num"&&state===0) {
-        state=1;
-      }
-      else if(token[i]==="IDENTIFICADOR"&&state===1){
-        state=2;
-      }
-      else if(token[i]==="ASIGNACION"&&state===2){
-        state=3;
-      }
-      else if(token[i]===1&&state===3){
-        state=4;
-      }
-      else if(token[i]==="PUNTO Y COMA"&&state===4){
-        buffer="DECLARACION";
+      switch (token[i].value) {
+        case "RESERVADA":
+          switch(token[i].name){
+            case "num":
+              console.log("NUM")
+              break;
+            case "cad":
+              console.log("CAD")
+              break;
+          }
+          break;
+      
+
       }
 
-      if (state!==0) {
-        arr.push(buffer);
-        buffer = "";
-        state = 0;
-        console.log(arr)
-      } else {
-        console.log("Error sintaxis")
-        buffer = "";  
-        state = 0;
-      }
-      
     }
   }
   function lexer(code){
@@ -97,24 +85,26 @@ function App() {
 
     const num = /[0-9]/;
     const letter = /^[a-zA-Z]+$/;
+    const punto = /^\d+\.\d{0,9}$/;
+    const entero = /^\d*$/;
     const resWords = ["num", "imp", "it", "cad", "smn", "for"];
     
     for (let i = 0; i < code.length; i++) {
       if(code.charAt(i)===";"&&state===0){
         state=1;
-        buffer="PUNTO Y COMA";
+        buffer={value: "PUNTO Y COMA", name: ";"};
       }
       else if (code.charAt(i)==='='&&state===0) {
         state=1;
         i++;
         if (code.charAt(i)==='=') {
           state=2;
-          buffer="COMPARACION";
+          buffer={value: "COMPARACION", name: "=="};
         }
         else{
           i--;
           state=2;
-          buffer="ASIGNACION";
+          buffer={VALUE:"ASIGNACION", name: "="};
         }
       }
       else if (code.charAt(i) === '<' && state === 0){
@@ -123,48 +113,48 @@ function App() {
           if (code.charAt(i) === '=')
           {
             state=1;
-            buffer="MENOR O IGUAL";
+            buffer={value: "MENOR O IGUAL", name: "<="};
           }
           else if (code.charAt(i) === '>')
           {
             state=1;
-            buffer="DIFERENTE";
+            buffer={value: "DIFERENTE", name: "<>"};
           }
           else
           {
             state=1;
-            buffer="MENOR QUE";
+            buffer={value: "MENOR QUE", name: "<"};
           }
       }
       else if(code.charAt(i)==="("&&state===0){
         state=1;
-        buffer="ABRE PARENTESIS";      
+        buffer={value: "ABRE PARENTESIS", name: "("};
       }
       else if(code.charAt(i)===")"&&state===0){
         state=1;
-        buffer="CIERRA PARENTESIS";      
+        buffer={value: "CIERRA PARENTESIS", name: ")"};
       }
       else if(code.charAt(i)==="{"&&state===0){
         state=1;
-        buffer="ABRE LLAVES";      
+        buffer={value: "ABRE LLAVES", name: "{"};
       }
       else if(code.charAt(i)==="}"&&state===0){
         state=1;
-        buffer="CIERRA LLAVES";      
+        buffer={value: "CIERRA LLAVES", name: "}"};
       }
       else if(code.charAt(i)===":"&&state===0){
         state=1;
-        buffer="DOS PUNTOS";      
+        buffer={value: "DOS PUNTOS", name: ":"};
       }
       else if(code.charAt(i)==="+"&&state===0){
         state = 1;
         i++;
         if (code.charAt(i)==="+") {
           state=1;
-          buffer="INCREMENTO";
+          buffer={value: "INCREMENTO", name: "++"};
         } else {
           state=1;
-          buffer="SUMA";
+          buffer={value: "SUMA", name: "+"};
         }
       }
       else if(code.charAt(i)==="-"&&state===0){
@@ -172,29 +162,36 @@ function App() {
         i++;
         if (code.charAt(i)==="-") {
           state=2;
-          buffer="DECREMENTO";
+          buffer={value: "DECREMENTO", name: "--"};
         } else {
           state=1;
-          buffer="RESTA";
+          buffer={value: "RESTO", name: "-"};
         }
       }
       else if(code.charAt(i)==="*"&&state===0){
         state=1;
-        buffer="MULTIPLICACION";
+        buffer={value: "MULTIPLICACION", name: "*"};
       }
       else if(code.charAt(i)==="/"&&state===0){
         state=1;
-        buffer="DIVISION";
+        buffer={value: "DIVISION", name: "/"};
       }
       else if(num.test(code.charAt(i))){
         state=1;
         buffer="";
         buffer+=code.charAt(i);
         i++;
-        while (num.test(code.charAt(i))) {
+        while (num.test(code.charAt(i))||code.charAt(i)===".") {
           buffer+= code.charAt(i);
-          buffer=1;
           i++;
+        }
+        if(punto.test(buffer)){
+          buffer={value: "FLOTANTE", name: "1.1"};
+        } 
+        else if(entero.test(buffer)){
+          buffer={value: "ENTERO", name: "1"};
+        } else {
+          state=0;
         }
         i--;
       }
@@ -209,9 +206,11 @@ function App() {
         i--;
         if(resWords.includes(buffer)){
           state=2;
+          buffer={value: "RESERVADA", name: buffer};
         } else {
           state=2;
-          buffer="IDENTIFICADOR";        
+          buffer={value: "IDENTIFICADOR", name: buffer};
+                  
         }
 
       }
