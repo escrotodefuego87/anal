@@ -26,6 +26,10 @@ function App() {
   const [eLexemas, setEllex] = useState([]);
   const [indLex, setIndlex] = useState([]);
   const [sin, setSin] = useState([]);
+  const [sinE, setSinE] = useState([]);
+  const [erroresIf, setEif] = useState([]);
+  const [semantico, setSem] = useState([]);
+
 
   let lineas = [];
   lineas = raw.split("\n");
@@ -43,25 +47,96 @@ function App() {
 
 
   const compilar = () => {
-    setLexemas([]); setEllex([]); setIndlex([]);
-    setLexemas(lexer(raw.trim()).lexemas);
-    setEllex(lexer(raw.trim()).errores);
-    setIndlex(lexer(raw.trim()).index);
+
+    lexer(raw);
     parser(lexemas.filter(Boolean));
-    // evaluar(lexemas.filter(Boolean));
+    semantic(sin);
+    console.log("Lexemas ", lexemas.filter(Boolean));
+    // console.log("Declaraciones ", sin);
 
   }
-  function parser(token) {
-    console.log("Tokens", token);
+  function semantic(items){
+    let declaraciones = [];
+    let declaraciones2 = [];
+    let errores = [];
 
-    token.push("end");
+    let iz=[{type:"a"}], der=[{type:"b"}];
+  
+    const letter = /^[a-zA-Z]+$/;
+    const num = /^[0-9]+$/;
+
+
+    items.forEach(element => {
+       
+      if(element.value === "DECLARACION"){
+        if(declaraciones2.includes(element.name)){
+          errores.push("la variable "+element.name+" ya ha sido declarada");
+
+        }
+        else if(element.type === element.obtained) {
+          declaraciones.push(element);
+          declaraciones2.push(element.name);
+        }
+        else if(element.obtained !== "num"&&element.obtained !== "it"&&element.obtained !== "cad"){
+          if(declaraciones.includes(element.obtained)){
+
+          }else{
+            errores.push("la variable "+element.obtained+" no ha sido declarada");
+          }
+        }
+        else{
+          errores.push("se esperaba un valor tipo "+element.type+" pero se encontro "+element.obtained+ " en la variable "+element.name)
+        }
+      }
+      else if(element.value === "SENTENCIA"){
+        iz = declaraciones.filter(val => {return val.name === element.left});
+        der = declaraciones.filter(val => {return val.name === element.right});
+        // console.log("ia me arto", iz[0], der[0])
+
+        if(!declaraciones2.includes(element.left)&&letter.test(element.left)){
+          errores.push("la variable "+element.left+ " no existe en el contexto actual")
+        }
+        if(!declaraciones2.includes(element.right)&&letter.test(element.right)){
+          errores.push("la variable "+element.right+ " no existe en el contexto actual")
+        }
+
+        if(num.test(element.right)){
+          if(element.mid !== "==" && element.mid !== "<>"){
+            if(iz[0].type==="cad"){
+              errores.push("se esperaba que las variables "+element.left+" y "+element.right+" fueran numericas")
+            }
+          }
+        }
+        else if(iz[0].type===der[0].type){
+          if(element.mid !== "==" && element.mid !== "<>"){
+            if(iz[0].type==="cad"||der[0].type==="cad"){
+              errores.push("se esperaba que las variables "+element.left+" y "+element.right+" fueran numericas")
+            }
+          }
+        }
+        else{
+          errores.push("no se pueden comparar "+iz[0].type+" y "+der[0].type+" entre si")
+        }
+      }
+    });
+
+    setSem(errores);
+  }
+  function parser(token) {
+
+    token.push({name:"END", value:0});
+    token.push({name:"END", value:0});
+    console.log(token)
     let evaluar = "";
     let parseo = [];
     let buffer = {};
     let errores = [];
+    let erroresIf = [];
     let err = {};
     let nombre = "";
     let salto = 0;
+    const num = /^[0-9]+$/;
+
     for (let i = 0; i < token.length; i++) {
 
       switch (token[i].name) {
@@ -73,17 +148,19 @@ function App() {
                 nombre = token[i].value;
                 i++;
                 if (token[i].name === "PUNTO Y COMA") {
-                  buffer = { value: "DECLARACION", type: "num", name: nombre }
+                  buffer = { value: "DECLARACION", type: "num", name: nombre, obtained: "num" }
                 }
                 else if (token[i].name === "ASIGNACION") {
                   i++;
                   if (token[i].name === "ENTERO" || token[i].name === "IDENTIFICADOR" || token[i].name === "FLOTANTE") {
-                    (token[i].name === "FLOTANTE") ? evaluar = "it" : evaluar = "num";
-                    (token[i].name === "IDENTIFICADOR") ? evaluar = token[i].value : evaluar = "num";
+                    if (token[i].name === "FLOTANTE") evaluar = "it"
+                    if (token[i].name === "IDENTIFICADOR") evaluar = token[i].value
+                    if (token[i].name === "ENTERO") evaluar = "num"
+
                     i++;
                     while (token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].value === '+' || token[i].value === '-' || token[i].value === '*' || token[i].value === '/') {
-                      i++;
                       if (token[i].name === "FLOTANTE" || token[i].name === 'DIVISION') { evaluar = "it" }
+                      i++;
                     }
                     if (token[i].name === "PUNTO Y COMA") {
                       buffer = { value: "DECLARACION", type: "num", name: nombre, obtained: evaluar }
@@ -96,6 +173,203 @@ function App() {
                       }
                       i--;
                       break;
+                    }
+                  }
+                  else if (token[i].name === "DOS PUNTOS") {
+                    i++;
+                    if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                      while (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                        i++;
+                      }
+                      if (token[i].name === "DOS PUNTOS") {
+                        i++;
+                        if (token[i].name === "PUNTO Y COMA") {
+                          buffer = { value: "DECLARACION", type: "num", name: nombre, obtained: "cad" }
+                        }
+                        else {
+                          err = {
+                            error: ";",
+                            linea: salto,
+                            token: token[i - 1].value
+                          }
+                        }
+                      }
+                      else {
+                        err = {
+                          error: "identificador",
+                          linea: salto,
+                          token: token[i - 1].value
+                        }
+                      }
+                    }
+                  }
+                  else {
+                    err = {
+                      error: "identificador",
+                      linea: salto,
+                      token: token[i - 1].value
+                    }
+                    i--;
+                    break;
+                  }
+
+                }
+                else {
+                  err = {
+                    error: ";",
+                    linea: salto,
+                    token: nombre
+                  }
+                  i--;
+                  break;
+                }
+              }
+              else {
+                err = {
+                  error: "identificador",
+                  linea: salto,
+                  token: token[i - 1].value
+                }
+                i--;
+                break;
+              }
+              break;
+            case "cad":
+              i++;
+              if (token[i].name === "IDENTIFICADOR") {
+                nombre = token[i].value;
+                i++;
+                if (token[i].name === "PUNTO Y COMA") {
+                  buffer = { value: "DECLARACION", type: "cad", name: nombre, obtained: "cad" }
+                }
+                else if (token[i].name === "ASIGNACION") {
+                  i++;
+                  if (token[i].name === "DOS PUNTOS") {
+                    i++;
+                    if (token[i].name === "IDENTIFICADOR") {
+                      i++;
+                      while (token[i].name === "IDENTIFICADOR") {
+                        i++;
+                      }
+                      if (token[i].name === "DOS PUNTOS") {
+                        i++;
+                        if (token[i].name === "PUNTO Y COMA") {
+                          buffer = { value: "DECLARACION", type: "cad", name: nombre, obtained: "cad" }
+
+                        }
+                        else {
+                          err = { error: ";", linea: salto, token: token[i - 1].name }
+                          i--;
+                          break;
+                        }
+                      }
+                      else {
+                        err = { error: ":", linea: salto, token: token[i - 1].name }
+                        i--;
+                        break;
+                      }
+                    }
+
+                  }
+                  else if (token[i].name === "ENTERO" || token[i].name === "IDENTIFICADOR" || token[i].name === "FLOTANTE") {
+                    if (token[i].name === "FLOTANTE") evaluar = "it"
+                    if (token[i].name === "IDENTIFICADOR") evaluar = token[i].value
+                    if (token[i].name === "ENTERO") evaluar = "num"
+
+                    i++;
+                    while (token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].value === '+' || token[i].value === '-' || token[i].value === '*' || token[i].value === '/') {
+                      if (token[i].name === "FLOTANTE" || token[i].name === 'DIVISION') { evaluar = "it" }
+                      i++;
+                    }
+                    if (token[i].name === "PUNTO Y COMA") {
+                      buffer = { value: "DECLARACION", type: "cad", name: nombre, obtained: evaluar }
+                    }
+                    else {
+                      err = {
+                        error: ";",
+                        linea: salto,
+                        token: token[i - 1].value
+                      }
+                      i--;
+                      break;
+                    }
+                  }
+                  else {
+                    err = { error: "identificador", linea: salto, token: nombre }
+                  }
+                }
+                else {
+                  err = { error: ";", linea: salto, token: nombre }
+                  i--;
+                  break;
+                }
+
+              }
+              else {
+                err = { error: "identificador", linea: salto, token: token[i - 1].name }
+                i--;
+                break;
+              }
+              break;
+            case "it":
+              i++;
+              if (token[i].name === "IDENTIFICADOR") {
+                nombre = token[i].value;
+                i++;
+                if (token[i].name === "PUNTO Y COMA") {
+                  buffer = { value: "DECLARACION", type: "it", name: nombre, obtained: "it" }
+                }
+                else if (token[i].name === "ASIGNACION") {
+                  i++;
+                  if (token[i].name === "ENTERO" || token[i].name === "IDENTIFICADOR" || token[i].name === "FLOTANTE") {
+                    if (token[i].name === "FLOTANTE") evaluar = "it"
+                    if (token[i].name === "IDENTIFICADOR") evaluar = token[i].value
+                    if (token[i].name === "ENTERO") evaluar = "num"
+
+                    i++;
+                    while (token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].value === '+' || token[i].value === '-' || token[i].value === '*' || token[i].value === '/'|| token[i].name==="IDENTIFICADOR") {
+                      if (token[i].name === "FLOTANTE" || token[i].name === 'DIVISION') { evaluar = "it" }
+                      i++;
+                    }
+                    if (token[i].name === "PUNTO Y COMA") {
+                      buffer = { value: "DECLARACION", type: "it", name: nombre, obtained: evaluar }
+                    }
+                    else {
+                      err = {
+                        error: ";",
+                        linea: salto,
+                        token: token[i - 1].value
+                      }
+                      i--;
+                      break;
+                    }
+                  }
+                  else if (token[i].name === "DOS PUNTOS") {
+                    i++;
+                    if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                      while (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                        i++;
+                      }
+                      if (token[i].name === "DOS PUNTOS") {
+                        i++;
+                        if (token[i].name === "PUNTO Y COMA") {
+                          buffer = { value: "DECLARACION", type: "it", name: nombre, obtained: "cad" }
+                        }
+                        else {
+                          err = {
+                            error: ";",
+                            linea: salto,
+                            token: token[i - 1].value
+                          }
+                        }
+                      }
+                      else {
+                        err = {
+                          error: "identificador",
+                          linea: salto,
+                          token: token[i - 1].value
+                        }
+                      }
                     }
                   }
                   else {
@@ -128,86 +402,304 @@ function App() {
                 break;
               }
               break;
-            case "cad":
+            case "smn":
               i++;
-              if (token[i].value === "IDENTIFICADOR") {
-                nombre = token[i].name;
-                i++;
-                if (token[i].value === "PUNTO Y COMA") {
-                  buffer = { value: "DECLARACION", type: "cad", name: nombre }
-                }
-                else if (token[i].value === "ASIGNACION") {
-                  i++;
-                  if (token[i].value === "DOS PUNTOS") {
-                    i++;
-                    if (token[i].value === "IDENTIFICADOR") {
-
-                      i++;
-                      while (token[i].value === "IDENTIFICADOR") {
-                        i++;
-                      }
-                      if (token[i].value === "DOS PUNTOS") {
-                        i++;
-                        if (token[i].value === "PUNTO Y COMA") {
-                          buffer = { value: "DECLARACION", type: "cad", name: nombre }
-
-                        }
-                        else {
-                          err = { error: ";", linea: salto, token: token[i - 1].name }
-                          i--;
-                          break;
-                        }
-                      }
-                      else {
-                        err = { error: ":", linea: salto, token: token[i - 1].name }
-                        i--;
-                        break;
-                      }
-                    }
-
-                  }
-                }
-
-                else {
-                  err = { error: ";", linea: salto, token: nombre }
-                  i--;
-                  break;
-                }
-
-              } else {
-                err = { error: "identificador", linea: salto, token: token[i - 1].name }
-                i--;
-                break;
+              if (token[i].name === "ABRE PARENTESIS") {
+                buffer = { value: "if", type: 1, linea: salto }
               }
+              break;
+            case "then":
+              i++;
+              if (token[i].name === "MENOR QUE") {
+                i++;
+                if (token[i].name === "AMPERSAND") {
+                  buffer = { value: "else", type: 1, linea: salto }
+                }
+              }
+
               break;
 
           }
           break;
         case "IDENTIFICADOR":
+          let iden = "";
+          let fantasy = [];
+          iden = token[i].value;
           i++;
-          switch (token[i].value) {
+          switch (token[i].name) {
+            case "ASIGNACION":            
+              i++;
+                if((token[i+1].name!=="SALTO"&&token[i+1].name!=="END"&&token[i+1].name !== "PUNTO Y COMA")&&(token[i].name === "ENTERO"||token[i].name === "FLOTANTE"||token[i].name === "IDENTIFICADOR"||token[i].name === "CADENA")){
+                  while (token[i].name==="CADENA"||token[i].name === "ENTERO"||token[i].name === "FLOTANTE"||token[i].name === "IDENTIFICADOR"||token[i].value === "+"||token[i].value === "-"||token[i].value === "*"||token[i].value === "/") {
+                    fantasy.push(token[i].value);
+                    i++;
+                  }
+                  if(token[i].name === "PUNTO Y COMA"){
+                    buffer = {type: "ASIGNACION", name:iden, data: fantasy }
+                    console.log(buffer)
+                  }
+                  else {
+                    err = {
+                      error: ";",
+                      linea: salto,
+                      token: token[i-1].value
+
+                    }
+                    console.log(err)
+                  }
+                }
+                else if(token[i].name === "ENTERO"){
+                  i++;
+                  if(token[i].name === "PUNTO Y COMA"){
+                    buffer = {type: "ASIGNACION", name:iden, data: token[i-1].value}
+                    console.log(buffer);
+                  }
+                  else {
+                    err = {
+                      error: ";",
+                      linea: salto,
+                      token: token[i - 1].value
+                      
+                    }
+                  }
+                }
+                else if(token[i].name === "FLOTANTE"){
+                  i++;
+                  if(token[i].name === "PUNTO Y COMA"){
+                    buffer = {type: "ASIGNACION", name:iden, data: token[i-1].value}
+                  }
+                  else {
+                    err = {
+                      error: ";",
+                      linea: salto,
+                      token: token[i - 1].value
+                      
+                    }
+                  }
+                }
+                else if(token[i].name === "CADENA"){
+                  i++;
+                  if(token[i].name === "PUNTO Y COMA"){
+                    buffer = {type: "ASIGNACION", name:iden, data: token[i-1].value}
+                    console.log(buffer)
+                  }
+                  else {
+                    err = {
+                      error: ";",
+                      linea: salto,
+                      token: token[i - 1].value
+                      
+                    }
+                  }
+                }
+                else if(token[i].name === "IDENTIFICADOR"){
+                  i++;
+                  if(token[i].name === "PUNTO Y COMA"){
+                    buffer = {type: "ASIGNACION", name:iden, data: token[i-1].value}
+                  }
+                  else {
+                    err = {
+                      error: ";",
+                      linea: salto,
+                      token: token[i - 1].value
+                      
+                    }
+                  }
+                }
+                else {
+                  err = {
+                    error: "valor",
+                    linea: salto,
+                    token: token[i-1].value
+                  }
+                }
+                
+            break;
             case "COMPARACION":
               i++;
-              if (token[i].value === "IDENTIFICADOR" || token[i].value === "ENTERO" || token[i] === "FLOTANTE") {
-                buffer = { value: "SENTENCIA", type: "IGUALACION" }
-
+              if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO" || token[i].name === "FLOTANTE") {
+                buffer = { value: "SENTENCIA", left: token[i - 2].value, mid: token[i - 1].value, right: token[i].value }
+                break;
+              }
+              else if (token[i].name === "DOS PUNTOS") {
+                i++;
+                if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                  while (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                    i++;
+                  }
+                  if (token[i].name === "DOS PUNTOS") {
+                    buffer = { value: "SENTENCIA", left: token[i - 4].value, mid: "==", right: "CADENA" }
+                  }
+                  else {
+                    err = {
+                      error: "cierre cadena",
+                      linea: salto,
+                      token: token[i - 1].value
+                    }
+                  }
+                }
+                else {
+                  err = {
+                    error: "identificador",
+                    linea: salto,
+                    token: token[i - 1].value
+                  }
+                }
+              }
+              else {
+                err = {
+                  error: "identificador",
+                  linea: salto,
+                  token: token[i - 1].value
+                }
+                i--;
               }
               break;
-            case "MAYOR O IGUAL":
+            case "MENOR QUE":
               i++;
-              if (token[i].value === "IDENTIFICADOR" || token[i].value === "ENTERO" || token[i] === "FLOTANTE") {
-                buffer = { value: "SENTENCIA", type: "MAYOR O IGUAL" }
+              if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO" || token[i].name === "FLOTANTE") {
+                buffer = { value: "SENTENCIA", left: token[i - 2].value, mid: token[i - 1].value, right: token[i].value }
+                break;
+              }
+              else if (token[i].name === "DOS PUNTOS") {
+                i++;
+                if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                  while (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                    i++;
+                  }
+                  if (token[i].name === "DOS PUNTOS") {
+                    buffer = { value: "SENTENCIA", left: token[i - 4].value, mid: "<", right: "CADENA" }
+                  }
+                  else {
+                    err = {
+                      error: "cierre cadena",
+                      linea: salto,
+                      token: token[i - 1].value
+                    }
+                  }
+                }
+                else {
+                  err = {
+                    error: "identificador",
+                    linea: salto,
+                    token: token[i - 1].value
+                  }
+                }
+              }
+              else {
+                err = {
+                  error: "identificador",
+                  linea: salto,
+                  token: token[i - 1].value
 
+                }
+                i--;
+                break;
+              }
+              break;
+            case "MAYOR QUE":
+              i++;
+              if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO" || token[i].name === "FLOTANTE") {
+                buffer = { value: "SENTENCIA", left: token[i - 2].value, mid: token[i - 1].value, right: token[i].value }
+                break;
+              }
+              else if (token[i].name === "DOS PUNTOS") {
+                i++;
+                if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                  while (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                    i++;
+                  }
+                  if (token[i].name === "DOS PUNTOS") {
+                    buffer = { value: "SENTENCIA", left: "IDENTIFICADOR", mid: ">", right: "CADENA" }
+                  }
+                  else {
+                    err = {
+                      error: "cierre cadena",
+                      linea: salto,
+                      token: token[i - 1].value
+                    }
+                  }
+                }
+                else {
+                  err = {
+                    error: "identificador",
+                    linea: salto,
+                    token: token[i - 1].value
+                  }
+                }
+              }
+              else {
+                err = {
+                  error: "identificador",
+                  linea: salto,
+                  token: token[i - 1].value
+                }
+                i--;
               }
               break;
             case "DIFERENTE":
               i++;
-              if (token[i].value === "IDENTIFICADOR" || token[i].value === "ENTERO" || token[i] === "FLOTANTE") {
-                buffer = { value: "SENTENCIA", type: "DIFERENTE" }
-
+              if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO" || token[i].name === "FLOTANTE") {
+                buffer = { value: "SENTENCIA", left: token[i - 2].value, mid: token[i - 1].value, right: token[i].value }
+                break;
+              }
+              else if (token[i].name === "DOS PUNTOS") {
+                i++;
+                if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                  while (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                    i++;
+                  }
+                  if (token[i].name === "DOS PUNTOS") {
+                    buffer = { value: "SENTENCIA", left: token[i - 4].value, mid: "<>", right: "CADENA" }
+                  }
+                  else {
+                    err = {
+                      error: "cierre cadena",
+                      linea: salto,
+                      token: token[i - 1].value
+                    }
+                  }
+                }
+                else {
+                  err = {
+                    error: "identificador",
+                    linea: salto,
+                    token: token[i - 1].value
+                  }
+                }
+              }
+              else {
+                err = {
+                  error: "identificador",
+                  linea: salto,
+                  token: token[i - 1].value
+                }
+                i--;
               }
               break;
           }
+          break;
+        case "CIERRA PARENTESIS":
+          i++;
+          if (token[i].name === "ABRE LLAVES") {
+            buffer = { value: "if", type: 2, linea: salto }
+          }
+          else {
+            err = { error: "{", linea: salto, token: token[i - 1].name }
+          }
+          break;
+        case "CIERRA LLAVES":
+          buffer = { value: "if", type: 3, linea: salto }
+
+          break;
+        case "DIVISION":
+          i++;
+          if (token[i].name === "MAYOR QUE") {
+            buffer = { value: "else", type: 2, linea: salto }
+          }
+          break;
+        case "SALTO":
+          salto++;
           break;
 
       }
@@ -218,11 +710,68 @@ function App() {
       err = {};
       nombre = "";
 
-
-
     }
-    console.log("Output", parseo.filter(value => Object.keys(value).length !== 0));
-    console.log("Errores", errores.filter(value => Object.keys(value).length !== 0));
+
+    parseo = parseo.filter(value => Object.keys(value).length !== 0)
+    errores = errores.filter(value => Object.keys(value).length !== 0)
+
+    parseo.push("end")
+    let salto2=0;
+    for(let i=0;i<parseo.length;i++){
+      if(parseo[i].value === "if" && parseo[i].type === 1){
+        i++;
+        if(parseo[i].value === "SENTENCIA"){
+          salto2=parseo[i-1].linea;
+          i++;
+          if(parseo[i].value === "if" && parseo[i].type === 2){
+            i++;
+            while(parseo[i].value === "DECLARACION"){
+              if(parseo[i].value === "SENTENCIA"){
+                erroresIf.push({error:"se esperaba declaracion", linea:salto2});
+              }
+              i++;
+            }
+            if(parseo[i].value === "if" && parseo[i].type === 3){
+              i++;
+              if(parseo[i].value === "else" && parseo[i].type === 1){
+                i++;
+                salto2=token[i-1].linea;
+                while(parseo[i].value === "DECLARACION"){
+                  if(parseo[i].value === "SENTENCIA"){
+                    erroresIf.push({error:"se esperaba declaracion", linea:salto2});
+                  }
+                  i++;
+                  if(parseo[i].value === "else" && parseo[i].type === 2){
+
+                  }
+                  else {
+                    erroresIf.push({error:"se esperaba cierre de then", linea:salto2});
+                    alert("f");
+                  }
+                }
+              }
+            }
+            else {
+              erroresIf.push({error:"se esperaba cierre de smn", linea:salto2});
+            }
+            
+          }
+          else {
+            erroresIf.push({error:"se esperaba )", linea:salto2});
+          }
+        }
+        else{
+          erroresIf.push({error:" sentencia valida dentro del smn", linea:salto2});
+        }
+      }
+
+
+ 
+    }
+
+    setSin(parseo);
+    setSinE(errores);
+    setEif(erroresIf);
 
   }
   function lexer(code) {
@@ -235,6 +784,7 @@ function App() {
 
     const num = /[0-9]/;
     const letter = /^[a-zA-Z]+$/;
+    const miroz=/^[a-zA-Z0-9, ]*$/
     const punto = /^\d+\.\d{0,9}$/;
     const entero = /^\d*$/;
     const resWords = ["num", "imp", "it", "cad", "smn", "for", "then"];
@@ -271,6 +821,20 @@ function App() {
         else {
           state = 1;
           buffer = { name: "MENOR QUE", value: "<" };
+          i--;
+        }
+      }
+      else if (code.charAt(i) === '>' && state === 0) {
+        state = 1;
+        i++;
+        if (code.charAt(i) === '=') {
+          state = 1;
+          buffer = { name: "MAYOR O IGUAL", value: ">=" };
+        }
+        else {
+          state = 1;
+          buffer = { name: "MAYOR QUE", value: ">" };
+          i--;
         }
       }
       else if (code.charAt(i) === "(" && state === 0) {
@@ -289,9 +853,20 @@ function App() {
         state = 1;
         buffer = { name: "CIERRA LLAVES", value: "}" };
       }
+      else if (code.charAt(i) === "&" && state === 0) {
+        state = 1;
+        buffer = { name: "AMPERSAND", value: "&" };
+      }
       else if (code.charAt(i) === ":" && state === 0) {
         state = 1;
-        buffer = { name: "DOS PUNTOS", value: ":" };
+        i++;
+        while(miroz.test(code.charAt(i))){
+          i++
+        }
+        if(code.charAt(i) === ":" && state===1){
+          buffer = { name: "CADENA", value: ":" };
+
+        }
       }
       else if (code.charAt(i) === "+" && state === 0) {
         state = 1;
@@ -303,6 +878,7 @@ function App() {
           state = 1;
           buffer = { name: "SUMA", value: "+" };
         }
+        i--;
       }
       else if (code.charAt(i) === "-" && state === 0) {
         state = 1;
@@ -314,6 +890,7 @@ function App() {
           state = 1;
           buffer = { name: "RESTA", value: "-" };
         }
+        i--;
       }
       else if (code.charAt(i) === "*" && state === 0) {
         state = 1;
@@ -382,11 +959,15 @@ function App() {
       }
 
     }
-    return {
-      lexemas: arr,
-      errores: errors,
-      index: index
-    };
+    // return {
+    //   lexemas: arr,
+    //   errores: errors,
+    //   index: index
+    // };
+
+    setLexemas(arr);
+    setEllex(errors);
+    setIndlex(index);
 
   }
 
@@ -426,11 +1007,31 @@ function App() {
               <Grid item xs={12}>
                 <Paper className={classes.container}>
                   <p>Errores sintacticos</p>
+                  {
+                    sinE.map((item, i) => (
+                      <div key={i}>
+                <p>Error en linea {item.linea + 1} se esperaba <span style={{ color: "red" }}> {item.error}</span> despues de: {item.token}</p>
+                      </div>
+                    ))
+                    
+                  }
+                  {
+                    erroresIf.filter(onlyUnique).map((item, i) => (
+                      <div key={i}>
+                <p>Error en linea {item.linea} se esperaba <span style={{ color: "red" }}> {item.error}</span></p>
+                      </div>
+                    ))
+                  }
                 </Paper>
               </Grid>
               <Grid item xs={12}>
                 <Paper className={classes.container}>
                   <p>Errores semanticos</p>
+                  {semantico.map((item, i) => (
+                    <div key={i}>
+                      <p>{item}</p>
+                    </div>
+                  ))}
                 </Paper>
               </Grid>
             </Grid>
