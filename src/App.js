@@ -55,67 +55,67 @@ function App() {
     // console.log("Declaraciones ", sin);
 
   }
-  function semantic(items){
+  function semantic(items) {
     let declaraciones = [];
     let declaraciones2 = [];
     let errores = [];
 
-    let iz=[{type:"a"}], der=[{type:"b"}];
-  
+    let iz = [{ type: "a" }], der = [{ type: "b" }];
+
     const letter = /^[a-zA-Z]+$/;
     const num = /^[0-9]+$/;
 
 
     items.forEach(element => {
-       
-      if(element.value === "DECLARACION"){
-        if(declaraciones2.includes(element.name)){
-          errores.push("la variable "+element.name+" ya ha sido declarada");
+
+      if (element.value === "DECLARACION") {
+        if (declaraciones2.includes(element.name)) {
+          errores.push("la variable " + element.name + " ya ha sido declarada");
 
         }
-        else if(element.type === element.obtained) {
+        else if (element.type === element.obtained) {
           declaraciones.push(element);
           declaraciones2.push(element.name);
         }
-        else if(element.obtained !== "num"&&element.obtained !== "it"&&element.obtained !== "cad"){
-          if(declaraciones.includes(element.obtained)){
+        else if (element.obtained !== "num" && element.obtained !== "it" && element.obtained !== "cad") {
+          if (declaraciones.includes(element.obtained)) {
 
-          }else{
-            errores.push("la variable "+element.obtained+" no ha sido declarada");
+          } else {
+            errores.push("la variable " + element.obtained + " no ha sido declarada");
           }
         }
-        else{
-          errores.push("se esperaba un valor tipo "+element.type+" pero se encontro "+element.obtained+ " en la variable "+element.name)
+        else {
+          errores.push("se esperaba un valor tipo " + element.type + " pero se encontro " + element.obtained + " en la variable " + element.name)
         }
       }
-      else if(element.value === "SENTENCIA"){
-        iz = declaraciones.filter(val => {return val.name === element.left});
-        der = declaraciones.filter(val => {return val.name === element.right});
+      else if (element.value === "SENTENCIA") {
+        iz = declaraciones.filter(val => { return val.name === element.left });
+        der = declaraciones.filter(val => { return val.name === element.right });
         // console.log("ia me arto", iz[0], der[0])
 
-        if(!declaraciones2.includes(element.left)&&letter.test(element.left)){
-          errores.push("la variable "+element.left+ " no existe en el contexto actual")
+        if (!declaraciones2.includes(element.left) && letter.test(element.left)) {
+          errores.push("la variable " + element.left + " no existe en el contexto actual")
         }
-        if(!declaraciones2.includes(element.right)&&letter.test(element.right)){
-          errores.push("la variable "+element.right+ " no existe en el contexto actual")
+        if (!declaraciones2.includes(element.right) && letter.test(element.right)) {
+          errores.push("la variable " + element.right + " no existe en el contexto actual")
         }
 
-        if(num.test(element.right)){
-          if(element.mid !== "==" && element.mid !== "<>"){
-            if(iz[0].type==="cad"){
-              errores.push("se esperaba que las variables "+element.left+" y "+element.right+" fueran numericas")
+        if (num.test(element.right)) {
+          if (element.mid !== "==" && element.mid !== "<>") {
+            if (iz[0].type === "cad") {
+              errores.push("se esperaba que las variables " + element.left + " y " + element.right + " fueran numericas")
             }
           }
         }
-        else if(iz[0].type===der[0].type){
-          if(element.mid !== "==" && element.mid !== "<>"){
-            if(iz[0].type==="cad"||der[0].type==="cad"){
-              errores.push("se esperaba que las variables "+element.left+" y "+element.right+" fueran numericas")
+        else if (iz[0].type === der[0].type) {
+          if (element.mid !== "==" && element.mid !== "<>") {
+            if (iz[0].type === "cad" || der[0].type === "cad") {
+              errores.push("se esperaba que las variables " + element.left + " y " + element.right + " fueran numericas")
             }
           }
         }
-        else{
-          errores.push("no se pueden comparar "+iz[0].type+" y "+der[0].type+" entre si")
+        else {
+          errores.push("no se pueden comparar " + iz[0].type + " y " + der[0].type + " entre si")
         }
       }
     });
@@ -124,9 +124,8 @@ function App() {
   }
   function parser(token) {
 
-    token.push({name:"END", value:0});
-    token.push({name:"END", value:0});
-    console.log(token)
+    token.push({ name: "END", value: 0 });
+    token.push({ name: "END", value: 0 });
     let evaluar = "";
     let parseo = [];
     let buffer = {};
@@ -145,261 +144,339 @@ function App() {
             case "num":
               i++;
               if (token[i].name === "IDENTIFICADOR") {
-                nombre = token[i].value;
+                let iden = "";
+                let fantasy = [];
+                iden = token[i].value;
                 i++;
-                if (token[i].name === "PUNTO Y COMA") {
-                  buffer = { value: "DECLARACION", type: "num", name: nombre, obtained: "num" }
-                }
-                else if (token[i].name === "ASIGNACION") {
-                  i++;
-                  if (token[i].name === "ENTERO" || token[i].name === "IDENTIFICADOR" || token[i].name === "FLOTANTE") {
-                    if (token[i].name === "FLOTANTE") evaluar = "it"
-                    if (token[i].name === "IDENTIFICADOR") evaluar = token[i].value
-                    if (token[i].name === "ENTERO") evaluar = "num"
-
+                switch (token[i].name) {
+                  case "ASIGNACION":
                     i++;
-                    while (token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].value === '+' || token[i].value === '-' || token[i].value === '*' || token[i].value === '/') {
-                      if (token[i].name === "FLOTANTE" || token[i].name === 'DIVISION') { evaluar = "it" }
-                      i++;
-                    }
-                    if (token[i].name === "PUNTO Y COMA") {
-                      buffer = { value: "DECLARACION", type: "num", name: nombre, obtained: evaluar }
-                    }
-                    else {
-                      err = {
-                        error: ";",
-                        linea: salto,
-                        token: token[i - 1].value
-                      }
-                      i--;
-                      break;
-                    }
-                  }
-                  else if (token[i].name === "DOS PUNTOS") {
-                    i++;
-                    if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
-                      while (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                    if ((token[i + 1].name !== "SALTO" && token[i + 1].name !== "END" && token[i + 1].name !== "PUNTO Y COMA") && (token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].name === "IDENTIFICADOR" || token[i].name === "CADENA")) {
+                      while (token[i].name === "CADENA" || token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].name === "IDENTIFICADOR" || token[i].value === "+" || token[i].value === "-" || token[i].value === "*" || token[i].value === "/") {
+                        fantasy.push(token[i].value);
                         i++;
                       }
-                      if (token[i].name === "DOS PUNTOS") {
-                        i++;
-                        if (token[i].name === "PUNTO Y COMA") {
-                          buffer = { value: "DECLARACION", type: "num", name: nombre, obtained: "cad" }
-                        }
-                        else {
-                          err = {
-                            error: ";",
-                            linea: salto,
-                            token: token[i - 1].value
-                          }
-                        }
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "num", name: iden, data: fantasy, linea: token[i].line }
                       }
                       else {
                         err = {
-                          error: "identificador",
-                          linea: salto,
+                          error: ";",
+                          linea: token[i - 1].line,
                           token: token[i - 1].value
+
                         }
                       }
                     }
-                  }
-                  else {
+                    else if (token[i].name === "ENTERO") {
+                      i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "num", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
+                    }
+                    else if (token[i].name === "FLOTANTE") {
+                      i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "num", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
+                    }
+                    else if (token[i].name === "CADENA") {
+                      i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "num", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
+                    }
+                    else if (token[i].name === "IDENTIFICADOR") {
+                      i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "num", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
+                    }
+                    else {
+                      err = {
+                        error: "valor",
+                        linea: token[i - 1].line,
+                        token: token[i - 1].value
+                      }
+                    }
+                    break;
+                  case "PUNTO Y COMA":
+                    buffer = { type: "DECLARACION", exp: "num", name: iden, data: "", linea: token[i].line }
+                    break;
+                  default:
                     err = {
-                      error: "identificador",
-                      linea: salto,
+                      error: "; o =",
+                      linea: token[i - 1].line,
                       token: token[i - 1].value
                     }
-                    i--;
                     break;
-                  }
+                }
 
-                }
-                else {
-                  err = {
-                    error: ";",
-                    linea: salto,
-                    token: nombre
-                  }
-                  i--;
-                  break;
-                }
               }
               else {
                 err = {
                   error: "identificador",
-                  linea: salto,
+                  linea: token[i - 1].line,
                   token: token[i - 1].value
                 }
-                i--;
-                break;
               }
+
               break;
             case "cad":
               i++;
               if (token[i].name === "IDENTIFICADOR") {
-                nombre = token[i].value;
+                let iden = "";
+                let fantasy = [];
+                iden = token[i].value;
                 i++;
-                if (token[i].name === "PUNTO Y COMA") {
-                  buffer = { value: "DECLARACION", type: "cad", name: nombre, obtained: "cad" }
-                }
-                else if (token[i].name === "ASIGNACION") {
-                  i++;
-                  if (token[i].name === "DOS PUNTOS") {
+                switch (token[i].name) {
+                  case "ASIGNACION":
                     i++;
-                    if (token[i].name === "IDENTIFICADOR") {
-                      i++;
-                      while (token[i].name === "IDENTIFICADOR") {
+                    if ((token[i + 1].name !== "SALTO" && token[i + 1].name !== "END" && token[i + 1].name !== "PUNTO Y COMA") && (token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].name === "IDENTIFICADOR" || token[i].name === "CADENA")) {
+                      while (token[i].name === "CADENA" || token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].name === "IDENTIFICADOR" || token[i].value === "+" || token[i].value === "-" || token[i].value === "*" || token[i].value === "/") {
+                        fantasy.push(token[i].value);
                         i++;
                       }
-                      if (token[i].name === "DOS PUNTOS") {
-                        i++;
-                        if (token[i].name === "PUNTO Y COMA") {
-                          buffer = { value: "DECLARACION", type: "cad", name: nombre, obtained: "cad" }
-
-                        }
-                        else {
-                          err = { error: ";", linea: salto, token: token[i - 1].name }
-                          i--;
-                          break;
-                        }
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "cad", name: iden, data: fantasy, linea: token[i].line }
                       }
                       else {
-                        err = { error: ":", linea: salto, token: token[i - 1].name }
-                        i--;
-                        break;
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
                       }
                     }
-
-                  }
-                  else if (token[i].name === "ENTERO" || token[i].name === "IDENTIFICADOR" || token[i].name === "FLOTANTE") {
-                    if (token[i].name === "FLOTANTE") evaluar = "it"
-                    if (token[i].name === "IDENTIFICADOR") evaluar = token[i].value
-                    if (token[i].name === "ENTERO") evaluar = "num"
-
-                    i++;
-                    while (token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].value === '+' || token[i].value === '-' || token[i].value === '*' || token[i].value === '/') {
-                      if (token[i].name === "FLOTANTE" || token[i].name === 'DIVISION') { evaluar = "it" }
+                    else if (token[i].name === "ENTERO") {
                       i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "cad", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
                     }
-                    if (token[i].name === "PUNTO Y COMA") {
-                      buffer = { value: "DECLARACION", type: "cad", name: nombre, obtained: evaluar }
+                    else if (token[i].name === "FLOTANTE") {
+                      i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "cad", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
+                    }
+                    else if (token[i].name === "CADENA") {
+                      i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "cad", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
+                    }
+                    else if (token[i].name === "IDENTIFICADOR") {
+                      i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "cad", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
                     }
                     else {
                       err = {
-                        error: ";",
-                        linea: salto,
+                        error: "valor",
+                        linea: token[i - 1].line,
                         token: token[i - 1].value
                       }
-                      i--;
-                      break;
                     }
-                  }
-                  else {
-                    err = { error: "identificador", linea: salto, token: nombre }
-                  }
-                }
-                else {
-                  err = { error: ";", linea: salto, token: nombre }
-                  i--;
-                  break;
+                    break;
+                  case "PUNTO Y COMA":
+                    buffer = { type: "DECLARACION", exp: "cad", name: iden, data: "", linea: token[i].line }
+                    break;
+                  default:
+                    err = {
+                      error: "; o =",
+                      linea: token[i - 1].line,
+                      token: token[i - 1].value
+                    }
+                    break;
                 }
 
               }
               else {
-                err = { error: "identificador", linea: salto, token: token[i - 1].name }
-                i--;
-                break;
+                err = {
+                  error: "identificador",
+                  linea: token[i - 1].line,
+                  token: token[i - 1].value
+                }
               }
+
               break;
             case "it":
               i++;
               if (token[i].name === "IDENTIFICADOR") {
-                nombre = token[i].value;
+                let iden = "";
+                let fantasy = [];
+                iden = token[i].value;
                 i++;
-                if (token[i].name === "PUNTO Y COMA") {
-                  buffer = { value: "DECLARACION", type: "it", name: nombre, obtained: "it" }
-                }
-                else if (token[i].name === "ASIGNACION") {
-                  i++;
-                  if (token[i].name === "ENTERO" || token[i].name === "IDENTIFICADOR" || token[i].name === "FLOTANTE") {
-                    if (token[i].name === "FLOTANTE") evaluar = "it"
-                    if (token[i].name === "IDENTIFICADOR") evaluar = token[i].value
-                    if (token[i].name === "ENTERO") evaluar = "num"
-
+                switch (token[i].name) {
+                  case "ASIGNACION":
                     i++;
-                    while (token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].value === '+' || token[i].value === '-' || token[i].value === '*' || token[i].value === '/'|| token[i].name==="IDENTIFICADOR") {
-                      if (token[i].name === "FLOTANTE" || token[i].name === 'DIVISION') { evaluar = "it" }
-                      i++;
-                    }
-                    if (token[i].name === "PUNTO Y COMA") {
-                      buffer = { value: "DECLARACION", type: "it", name: nombre, obtained: evaluar }
-                    }
-                    else {
-                      err = {
-                        error: ";",
-                        linea: salto,
-                        token: token[i - 1].value
-                      }
-                      i--;
-                      break;
-                    }
-                  }
-                  else if (token[i].name === "DOS PUNTOS") {
-                    i++;
-                    if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
-                      while (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO") {
+                    if ((token[i + 1].name !== "SALTO" && token[i + 1].name !== "END" && token[i + 1].name !== "PUNTO Y COMA") && (token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].name === "IDENTIFICADOR" || token[i].name === "CADENA")) {
+                      while (token[i].name === "CADENA" || token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].name === "IDENTIFICADOR" || token[i].value === "+" || token[i].value === "-" || token[i].value === "*" || token[i].value === "/") {
+                        fantasy.push(token[i].value);
                         i++;
                       }
-                      if (token[i].name === "DOS PUNTOS") {
-                        i++;
-                        if (token[i].name === "PUNTO Y COMA") {
-                          buffer = { value: "DECLARACION", type: "it", name: nombre, obtained: "cad" }
-                        }
-                        else {
-                          err = {
-                            error: ";",
-                            linea: salto,
-                            token: token[i - 1].value
-                          }
-                        }
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "it", name: iden, data: fantasy, linea: token[i].line }
                       }
                       else {
                         err = {
-                          error: "identificador",
-                          linea: salto,
+                          error: ";",
+                          linea: token[i - 1].line,
                           token: token[i - 1].value
+
                         }
                       }
                     }
-                  }
-                  else {
+                    else if (token[i].name === "ENTERO") {
+                      i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "it", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
+                    }
+                    else if (token[i].name === "FLOTANTE") {
+                      i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "it", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
+                    }
+                    else if (token[i].name === "CADENA") {
+                      i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "it", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
+                    }
+                    else if (token[i].name === "IDENTIFICADOR") {
+                      i++;
+                      if (token[i].name === "PUNTO Y COMA") {
+                        buffer = { type: "DECLARACION", exp: "it", name: iden, data: token[i - 1].value, linea: token[i].line }
+                      }
+                      else {
+                        err = {
+                          error: ";",
+                          linea: token[i - 1].line,
+                          token: token[i - 1].value
+
+                        }
+                      }
+                    }
+                    else {
+                      err = {
+                        error: "valor",
+                        linea: token[i - 1].line,
+                        token: token[i - 1].value
+                      }
+                    }
+                    break;
+                  case "PUNTO Y COMA":
+                    buffer = { type: "DECLARACION", exp: "it", name: iden, data: "", linea: token[i].line }
+                    break;
+                  default:
                     err = {
-                      error: "identificador",
-                      linea: salto,
+                      error: "; o =",
+                      linea: token[i - 1].line,
                       token: token[i - 1].value
                     }
-                    i--;
                     break;
-                  }
+                }
 
-                }
-                else {
-                  err = {
-                    error: ";",
-                    linea: salto,
-                    token: nombre
-                  }
-                  i--;
-                  break;
-                }
-              } else {
+              }
+              else {
                 err = {
                   error: "identificador",
-                  linea: salto,
+                  linea: token[i - 1].line,
                   token: token[i - 1].value
                 }
-                i--;
-                break;
               }
               break;
             case "smn":
@@ -427,94 +504,90 @@ function App() {
           iden = token[i].value;
           i++;
           switch (token[i].name) {
-            case "ASIGNACION":            
+            case "ASIGNACION":
               i++;
-                if((token[i+1].name!=="SALTO"&&token[i+1].name!=="END"&&token[i+1].name !== "PUNTO Y COMA")&&(token[i].name === "ENTERO"||token[i].name === "FLOTANTE"||token[i].name === "IDENTIFICADOR"||token[i].name === "CADENA")){
-                  while (token[i].name==="CADENA"||token[i].name === "ENTERO"||token[i].name === "FLOTANTE"||token[i].name === "IDENTIFICADOR"||token[i].value === "+"||token[i].value === "-"||token[i].value === "*"||token[i].value === "/") {
-                    fantasy.push(token[i].value);
-                    i++;
-                  }
-                  if(token[i].name === "PUNTO Y COMA"){
-                    buffer = {type: "ASIGNACION", name:iden, data: fantasy }
-                    console.log(buffer)
-                  }
-                  else {
-                    err = {
-                      error: ";",
-                      linea: salto,
-                      token: token[i-1].value
-
-                    }
-                    console.log(err)
-                  }
-                }
-                else if(token[i].name === "ENTERO"){
+              if ((token[i + 1].name !== "SALTO" && token[i + 1].name !== "END" && token[i + 1].name !== "PUNTO Y COMA") && (token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].name === "IDENTIFICADOR" || token[i].name === "CADENA")) {
+                while (token[i].name === "CADENA" || token[i].name === "ENTERO" || token[i].name === "FLOTANTE" || token[i].name === "IDENTIFICADOR" || token[i].value === "+" || token[i].value === "-" || token[i].value === "*" || token[i].value === "/") {
+                  fantasy.push(token[i].value);
                   i++;
-                  if(token[i].name === "PUNTO Y COMA"){
-                    buffer = {type: "ASIGNACION", name:iden, data: token[i-1].value}
-                    console.log(buffer);
-                  }
-                  else {
-                    err = {
-                      error: ";",
-                      linea: salto,
-                      token: token[i - 1].value
-                      
-                    }
-                  }
                 }
-                else if(token[i].name === "FLOTANTE"){
-                  i++;
-                  if(token[i].name === "PUNTO Y COMA"){
-                    buffer = {type: "ASIGNACION", name:iden, data: token[i-1].value}
-                  }
-                  else {
-                    err = {
-                      error: ";",
-                      linea: salto,
-                      token: token[i - 1].value
-                      
-                    }
-                  }
-                }
-                else if(token[i].name === "CADENA"){
-                  i++;
-                  if(token[i].name === "PUNTO Y COMA"){
-                    buffer = {type: "ASIGNACION", name:iden, data: token[i-1].value}
-                    console.log(buffer)
-                  }
-                  else {
-                    err = {
-                      error: ";",
-                      linea: salto,
-                      token: token[i - 1].value
-                      
-                    }
-                  }
-                }
-                else if(token[i].name === "IDENTIFICADOR"){
-                  i++;
-                  if(token[i].name === "PUNTO Y COMA"){
-                    buffer = {type: "ASIGNACION", name:iden, data: token[i-1].value}
-                  }
-                  else {
-                    err = {
-                      error: ";",
-                      linea: salto,
-                      token: token[i - 1].value
-                      
-                    }
-                  }
+                if (token[i].name === "PUNTO Y COMA") {
+                  buffer = { type: "ASIGNACION", name: iden, data: fantasy }
                 }
                 else {
                   err = {
-                    error: "valor",
+                    error: ";",
                     linea: salto,
-                    token: token[i-1].value
+                    token: token[i - 1].value
+
                   }
                 }
-                
-            break;
+              }
+              else if (token[i].name === "ENTERO") {
+                i++;
+                if (token[i].name === "PUNTO Y COMA") {
+                  buffer = { type: "ASIGNACION", name: iden, data: token[i - 1].value }
+                }
+                else {
+                  err = {
+                    error: ";",
+                    linea: salto,
+                    token: token[i - 1].value
+
+                  }
+                }
+              }
+              else if (token[i].name === "FLOTANTE") {
+                i++;
+                if (token[i].name === "PUNTO Y COMA") {
+                  buffer = { type: "ASIGNACION", name: iden, data: token[i - 1].value }
+                }
+                else {
+                  err = {
+                    error: ";",
+                    linea: salto,
+                    token: token[i - 1].value
+
+                  }
+                }
+              }
+              else if (token[i].name === "CADENA") {
+                i++;
+                if (token[i].name === "PUNTO Y COMA") {
+                  buffer = { type: "ASIGNACION", name: iden, data: token[i - 1].value }
+                }
+                else {
+                  err = {
+                    error: ";",
+                    linea: salto,
+                    token: token[i - 1].value
+
+                  }
+                }
+              }
+              else if (token[i].name === "IDENTIFICADOR") {
+                i++;
+                if (token[i].name === "PUNTO Y COMA") {
+                  buffer = { type: "ASIGNACION", name: iden, data: token[i - 1].value }
+                }
+                else {
+                  err = {
+                    error: ";",
+                    linea: salto,
+                    token: token[i - 1].value
+
+                  }
+                }
+              }
+              else {
+                err = {
+                  error: "valor",
+                  linea: salto,
+                  token: token[i - 1].value
+                }
+              }
+
+              break;
             case "COMPARACION":
               i++;
               if (token[i].name === "IDENTIFICADOR" || token[i].name === "ENTERO" || token[i].name === "FLOTANTE") {
@@ -705,7 +778,9 @@ function App() {
       }
 
       parseo.push(buffer);
+      // console.log(buffer);
       errores.push(err);
+      // console.log(err);
       buffer = {};
       err = {};
       nombre = "";
@@ -714,59 +789,60 @@ function App() {
 
     parseo = parseo.filter(value => Object.keys(value).length !== 0)
     errores = errores.filter(value => Object.keys(value).length !== 0)
+    console.log(parseo);
 
     parseo.push("end")
-    let salto2=0;
-    for(let i=0;i<parseo.length;i++){
-      if(parseo[i].value === "if" && parseo[i].type === 1){
+    let salto2 = 0;
+    for (let i = 0; i < parseo.length; i++) {
+      if (parseo[i].value === "if" && parseo[i].type === 1) {
         i++;
-        if(parseo[i].value === "SENTENCIA"){
-          salto2=parseo[i-1].linea;
+        if (parseo[i].value === "SENTENCIA") {
+          salto2 = parseo[i - 1].linea;
           i++;
-          if(parseo[i].value === "if" && parseo[i].type === 2){
+          if (parseo[i].value === "if" && parseo[i].type === 2) {
             i++;
-            while(parseo[i].value === "DECLARACION"){
-              if(parseo[i].value === "SENTENCIA"){
-                erroresIf.push({error:"se esperaba declaracion", linea:salto2});
+            while (parseo[i].value === "DECLARACION") {
+              if (parseo[i].value === "SENTENCIA") {
+                erroresIf.push({ error: "se esperaba declaracion", linea: salto2 });
               }
               i++;
             }
-            if(parseo[i].value === "if" && parseo[i].type === 3){
+            if (parseo[i].value === "if" && parseo[i].type === 3) {
               i++;
-              if(parseo[i].value === "else" && parseo[i].type === 1){
+              if (parseo[i].value === "else" && parseo[i].type === 1) {
                 i++;
-                salto2=token[i-1].linea;
-                while(parseo[i].value === "DECLARACION"){
-                  if(parseo[i].value === "SENTENCIA"){
-                    erroresIf.push({error:"se esperaba declaracion", linea:salto2});
+                salto2 = token[i - 1].linea;
+                while (parseo[i].value === "DECLARACION") {
+                  if (parseo[i].value === "SENTENCIA") {
+                    erroresIf.push({ error: "se esperaba declaracion", linea: salto2 });
                   }
                   i++;
-                  if(parseo[i].value === "else" && parseo[i].type === 2){
+                  if (parseo[i].value === "else" && parseo[i].type === 2) {
 
                   }
                   else {
-                    erroresIf.push({error:"se esperaba cierre de then", linea:salto2});
+                    erroresIf.push({ error: "se esperaba cierre de then", linea: salto2 });
                     alert("f");
                   }
                 }
               }
             }
             else {
-              erroresIf.push({error:"se esperaba cierre de smn", linea:salto2});
+              erroresIf.push({ error: "se esperaba cierre de smn", linea: salto2 });
             }
-            
+
           }
           else {
-            erroresIf.push({error:"se esperaba )", linea:salto2});
+            erroresIf.push({ error: "se esperaba )", linea: salto2 });
           }
         }
-        else{
-          erroresIf.push({error:" sentencia valida dentro del smn", linea:salto2});
+        else {
+          erroresIf.push({ error: " sentencia valida dentro del smn", linea: salto2 });
         }
       }
 
 
- 
+
     }
 
     setSin(parseo);
@@ -784,7 +860,7 @@ function App() {
 
     const num = /[0-9]/;
     const letter = /^[a-zA-Z]+$/;
-    const miroz=/^[a-zA-Z0-9, ]*$/
+    const miroz = /^[a-zA-Z0-9, ]*$/
     const punto = /^\d+\.\d{0,9}$/;
     const entero = /^\d*$/;
     const resWords = ["num", "imp", "it", "cad", "smn", "for", "then"];
@@ -792,19 +868,19 @@ function App() {
     for (let i = 0; i < code.length; i++) {
       if (code.charAt(i) === ";" && state === 0) {
         state = 1;
-        buffer = { name: "PUNTO Y COMA", value: ";" };
+        buffer = { name: "PUNTO Y COMA", value: ";", line: count };
       }
       else if (code.charAt(i) === '=' && state === 0) {
         state = 1;
         i++;
         if (code.charAt(i) === '=') {
           state = 2;
-          buffer = { name: "COMPARACION", value: "==" };
+          buffer = { name: "COMPARACION", value: "==", line: count };
         }
         else {
           i--;
           state = 2;
-          buffer = { name: "ASIGNACION", value: "=" };
+          buffer = { name: "ASIGNACION", value: "=", line: count };
         }
       }
       else if (code.charAt(i) === '<' && state === 0) {
@@ -812,15 +888,15 @@ function App() {
         i++;
         if (code.charAt(i) === '=') {
           state = 1;
-          buffer = { name: "MENOR O IGUAL", value: "<=" };
+          buffer = { name: "MENOR O IGUAL", value: "<=", line: count };
         }
         else if (code.charAt(i) === '>') {
           state = 1;
-          buffer = { name: "DIFERENTE", value: "<>" };
+          buffer = { name: "DIFERENTE", value: "<>", line: count };
         }
         else {
           state = 1;
-          buffer = { name: "MENOR QUE", value: "<" };
+          buffer = { name: "MENOR QUE", value: "<", line: count };
           i--;
         }
       }
@@ -829,42 +905,42 @@ function App() {
         i++;
         if (code.charAt(i) === '=') {
           state = 1;
-          buffer = { name: "MAYOR O IGUAL", value: ">=" };
+          buffer = { name: "MAYOR O IGUAL", value: ">=", line: count };
         }
         else {
           state = 1;
-          buffer = { name: "MAYOR QUE", value: ">" };
+          buffer = { name: "MAYOR QUE", value: ">", line: count };
           i--;
         }
       }
       else if (code.charAt(i) === "(" && state === 0) {
         state = 1;
-        buffer = { name: "ABRE PARENTESIS", value: "(" };
+        buffer = { name: "ABRE PARENTESIS", value: "(", line: count };
       }
       else if (code.charAt(i) === ")" && state === 0) {
         state = 1;
-        buffer = { name: "CIERRA PARENTESIS", value: ")" };
+        buffer = { name: "CIERRA PARENTESIS", value: ")", line: count };
       }
       else if (code.charAt(i) === "{" && state === 0) {
         state = 1;
-        buffer = { name: "ABRE LLAVES", value: "{" };
+        buffer = { name: "ABRE LLAVES", value: "{", line: count };
       }
       else if (code.charAt(i) === "}" && state === 0) {
         state = 1;
-        buffer = { name: "CIERRA LLAVES", value: "}" };
+        buffer = { name: "CIERRA LLAVES", value: "}", line: count };
       }
       else if (code.charAt(i) === "&" && state === 0) {
         state = 1;
-        buffer = { name: "AMPERSAND", value: "&" };
+        buffer = { name: "AMPERSAND", value: "&", line: count };
       }
       else if (code.charAt(i) === ":" && state === 0) {
         state = 1;
         i++;
-        while(miroz.test(code.charAt(i))){
+        while (miroz.test(code.charAt(i))) {
           i++
         }
-        if(code.charAt(i) === ":" && state===1){
-          buffer = { name: "CADENA", value: ":" };
+        if (code.charAt(i) === ":" && state === 1) {
+          buffer = { name: "CADENA", value: ":", line: count };
 
         }
       }
@@ -873,10 +949,10 @@ function App() {
         i++;
         if (code.charAt(i) === "+") {
           state = 1;
-          buffer = { name: "INCREMENTO", value: "++" };
+          buffer = { name: "INCREMENTO", value: "++", line: count };
         } else {
           state = 1;
-          buffer = { name: "SUMA", value: "+" };
+          buffer = { name: "SUMA", value: "+", line: count };
         }
         i--;
       }
@@ -885,20 +961,20 @@ function App() {
         i++;
         if (code.charAt(i) === "-") {
           state = 2;
-          buffer = { name: "DECREMENTO", value: "--" };
+          buffer = { name: "DECREMENTO", value: "--", line: count };
         } else {
           state = 1;
-          buffer = { name: "RESTA", value: "-" };
+          buffer = { name: "RESTA", value: "-", line: count };
         }
         i--;
       }
       else if (code.charAt(i) === "*" && state === 0) {
         state = 1;
-        buffer = { name: "MULTIPLICACION", value: "*" };
+        buffer = { name: "MULTIPLICACION", value: "*", line: count };
       }
       else if (code.charAt(i) === "/" && state === 0) {
         state = 1;
-        buffer = { name: "DIVISION", value: "/" };
+        buffer = { name: "DIVISION", value: "/", line: count };
       }
       else if (num.test(code.charAt(i))) {
         state = 1;
@@ -910,10 +986,10 @@ function App() {
           i++;
         }
         if (punto.test(buffer)) {
-          buffer = { name: "FLOTANTE", value: parseFloat(buffer, 10) };
+          buffer = { name: "FLOTANTE", value: parseFloat(buffer, 10), line: count };
         }
         else if (entero.test(buffer)) {
-          buffer = { name: "ENTERO", value: parseInt(buffer, 10) };
+          buffer = { name: "ENTERO", value: parseInt(buffer, 10), line: count };
         } else {
           state = 0;
         }
@@ -930,10 +1006,10 @@ function App() {
         i--;
         if (resWords.includes(buffer)) {
           state = 2;
-          buffer = { name: "RESERVADA", value: buffer };
+          buffer = { name: "RESERVADA", value: buffer, line: count };
         } else {
           state = 2;
-          buffer = { name: "IDENTIFICADOR", value: buffer };
+          buffer = { name: "IDENTIFICADOR", value: buffer, line: count };
 
         }
 
@@ -959,11 +1035,6 @@ function App() {
       }
 
     }
-    // return {
-    //   lexemas: arr,
-    //   errores: errors,
-    //   index: index
-    // };
 
     setLexemas(arr);
     setEllex(errors);
@@ -1010,15 +1081,15 @@ function App() {
                   {
                     sinE.map((item, i) => (
                       <div key={i}>
-                <p>Error en linea {item.linea + 1} se esperaba <span style={{ color: "red" }}> {item.error}</span> despues de: {item.token}</p>
+                        <p>Error en linea {item.linea + 1} se esperaba <span style={{ color: "red" }}> {item.error}</span> despues de: {item.token}</p>
                       </div>
                     ))
-                    
+
                   }
                   {
                     erroresIf.filter(onlyUnique).map((item, i) => (
                       <div key={i}>
-                <p>Error en linea {item.linea} se esperaba <span style={{ color: "red" }}> {item.error}</span></p>
+                        <p>Error en linea {item.linea} se esperaba <span style={{ color: "red" }}> {item.error}</span></p>
                       </div>
                     ))
                   }
